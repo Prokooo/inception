@@ -1,0 +1,87 @@
+
+services:
+  mariadb:
+    build: ./mariadb
+    image: mariadb
+    env_file: .env
+    networks:
+      - inception
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    restart: always
+  
+  wordpress:
+    build: ./wordpress
+    image: wordpress
+    depends_on:
+      - mariadb
+    restart: always
+    env_file: .env
+    networks:
+      - inception
+    volumes:
+      - wordpress_data:/var/www/html
+  
+  nginx:
+    build: ./nginx
+    image: nginx
+    depends_on:
+      - wordpress
+    env_file: .env
+    ports:
+      - "443:443"
+    networks:
+      - inception
+    restart: always
+    volumes:
+      - wordpress_data:/var/www/html
+
+networks:
+  inception:
+
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none 
+      device: /home/jlevy/data/db
+    name: mariadb_data
+  wordpress_data:
+    name: wordpress_data
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/jlevy/data/wp
+
+
+# docker stop $(docker ps -qa); docker rm $(docker ps -qa); docker rmi -f $(docker images -qa); docker volume rm $(docker volume ls -q); docker network rm $(docker network ls -q) 2>/dev/null
+
+#  openssl s_client -connect jlevy.42.fr:443 -tls1_2
+
+#  wp-admin
+
+# SELECT user_login  FROM wp_users;
+
+# mysql -u jlevy -p 
+
+
+
+#  Flux complet d'une requête
+
+# 1. Navigateur → https://jlevy.42.fr
+#                       ↓
+# 2. Nginx (port 443) reçoit la requête
+#                       ↓
+# 3. Fichier .php ? → Nginx envoie à WordPress:9000
+#                       ↓
+# 4. WordPress (PHP-FPM) exécute le code PHP
+#                       ↓
+# 5. PHP a besoin de données ? → Connexion à mariadb:3306
+#                       ↓
+# 6. MariaDB retourne les données
+#                       ↓
+# 7. WordPress génère le HTML
+#                       ↓
+# 8. Nginx renvoie le HTML au navigateur
